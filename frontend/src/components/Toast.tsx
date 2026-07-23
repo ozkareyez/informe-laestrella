@@ -1,21 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, X } from 'lucide-react';
+import { onToast, type ToastMessage } from '../toastBus';
 
-type ToastType = 'success' | 'error' | 'info';
-
-interface ToastMessage {
-  id: number;
-  message: string;
-  type: ToastType;
-}
-
-let toastId = 0;
-const listeners: Set<(msg: ToastMessage) => void> = new Set();
-
-export function toast(message: string, type: ToastType = 'success') {
-  const msg: ToastMessage = { id: ++toastId, message, type };
-  listeners.forEach(fn => fn(msg));
-}
+export { toast } from '../toastBus';
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -27,10 +14,7 @@ export function ToastContainer() {
     }, 4000);
   }, []);
 
-  useEffect(() => {
-    listeners.add(addToast);
-    return () => { listeners.delete(addToast); };
-  }, [addToast]);
+  useEffect(() => onToast(addToast), [addToast]);
 
   function remove(id: number) {
     setToasts(prev => prev.filter(t => t.id !== id));

@@ -21,6 +21,21 @@ export function calculateKgPerHour(kg: number, hours: number): number {
   return Math.round((kg / hours) * 100) / 100;
 }
 
+export function calculateMinutesSince(date: string, start_time: string): number {
+  const start = new Date(`${date}T${start_time}:00`);
+  if (isNaN(start.getTime())) return 0;
+  return Math.max(0, Math.round((Date.now() - start.getTime()) / 60000));
+}
+
+export function calculateHoursSince(date: string, start_time: string): number {
+  return Math.round((calculateMinutesSince(date, start_time) / 60) * 100) / 100;
+}
+
+export function calculateTimeSpentSince(date: string, start_time: string): string {
+  const total = calculateMinutesSince(date, start_time);
+  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
+}
+
 const STANDARD_KG_PER_HOUR = 2500;
 const CARGUE_STANDARD_KG_PER_HOUR = 4000; // 2000 kg / 30 min
 const DESCARGUE_STANDARD_KG_PER_HOUR = 66666.67; // 200000 kg / 3 h

@@ -2,32 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, Clock, User, Package, UserPlus } from 'lucide-react';
 import { getPendingOrders, getUnassignedOrders, completeOrder, getOperators } from '../api';
 import type { Order, Operator } from '../types';
-import { getCurrentTime, calculateHours, calculateKgPerHour, calculateEfficiency, formatEfficiency } from '../utils';
+import { getCurrentTime, calculateMinutesSince, calculateHoursSince, calculateTimeSpentSince, calculateKgPerHour, calculateEfficiency, formatEfficiency } from '../utils';
 
 interface Props {
   onCompleted: () => void;
   onAssignOperator: (id: number, operator: string) => Promise<void>;
 }
 
-function ElapsedTime({ start }: { start: string }) {
+function ElapsedTime({ date, start }: { date: string; start: string }) {
   const [elapsed, setElapsed] = useState('');
 
   useEffect(() => {
     function update() {
-      const [sh, sm] = start.split(':').map(Number);
-      const now = new Date();
-      const nh = now.getHours();
-      const nm = now.getMinutes();
-      let diff = (nh * 60 + nm) - (sh * 60 + sm);
-      if (diff < 0) diff += 24 * 60;
-      const h = Math.floor(diff / 60);
-      const m = diff % 60;
-      setElapsed(`${h}h ${m.toString().padStart(2, '0')}m`);
+      setElapsed(calculateTimeSpentSince(date, start));
     }
     update();
     const id = setInterval(update, 30000);
     return () => clearInterval(id);
-  }, [start]);
+  }, [date, start]);
 
   return <span className="font-mono text-sm">{elapsed}</span>;
 }
@@ -73,21 +65,15 @@ export default function PendingOrders({ onCompleted, onAssignOperator }: Props) 
 
   async function handleFinalize(order: Order) {
     const end = getCurrentTime();
-    if (end <= order.start_time) {
+    if (calculateMinutesSince(order.date, order.start_time) < 1) {
       alert('Debe esperar a que pase al menos un minuto para finalizar');
       return;
     }
     setFinalizing(order.id);
     try {
       const updated = await completeOrder(order.id, end);
-      const time_spent = `${Math.floor(
-        (parseInt(end.split(':')[0]) * 60 + parseInt(end.split(':')[1]) -
-        parseInt(order.start_time.split(':')[0]) * 60 - parseInt(order.start_time.split(':')[1])) / 60
-      )}h ${(
-        (parseInt(end.split(':')[0]) * 60 + parseInt(end.split(':')[1]) -
-        parseInt(order.start_time.split(':')[0]) * 60 - parseInt(order.start_time.split(':')[1])) % 60
-      )}m`;
-      const hours = calculateHours(order.start_time, end);
+      const time_spent = calculateTimeSpentSince(order.date, order.start_time);
+      const hours = calculateHoursSince(order.date, order.start_time);
       const kgph = calculateKgPerHour(order.kg, hours);
       const eff = calculateEfficiency(kgph);
       setSummary({
@@ -268,7 +254,7 @@ export default function PendingOrders({ onCompleted, onAssignOperator }: Props) 
                     <span>{order.kg} kg</span>
                     <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {order.operator}</span>
                     <span>Inicio: {order.start_time}</span>
-                    <span className="font-mono"><ElapsedTime start={order.start_time} /></span>
+                    <span className="font-mono"><ElapsedTime date={order.date} start={order.start_time} /></span>
                     {order.created_by && <span className="text-gray-400">Creado: {order.created_by}</span>}
                   </div>
                   <button onClick={() => handleFinalize(order)} disabled={finalizing === order.id}
@@ -287,7 +273,7 @@ export default function PendingOrders({ onCompleted, onAssignOperator }: Props) 
                       <User className="w-3 h-3" /> {order.operator}
                     </span>
                     <span className="text-gray-500 shrink-0">{order.start_time}</span>
-                    <span className="text-gray-700 shrink-0 font-mono text-xs"><ElapsedTime start={order.start_time} /></span>
+                    <span className="text-gray-700 shrink-0 font-mono text-xs"><ElapsedTime date={order.date} start={order.start_time} /></span>
                     {order.created_by && <span className="text-gray-400 shrink-0 text-[10px]">Creado: {order.created_by}</span>}
                     <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                       order.type === 'Masivo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'

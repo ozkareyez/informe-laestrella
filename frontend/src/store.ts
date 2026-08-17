@@ -1,5 +1,5 @@
 import type { Order, OrderFormData, RegisterOrderData, DashboardData, StatisticsData, Client, Despacho, Unloading, UnloadingFormData, Operator, CitaCargue, CitaCargueFormData } from './types';
-import { calculateTimeSpent, calculateHours, calculateKgPerHour, calculateEfficiency, calculateCargueTime } from './utils';
+import { calculateTimeSpent, calculateHours, calculateKgPerHour, calculateEfficiency, calculateCargueTime, calculateHoursSince, calculateTimeSpentSince } from './utils';
 
 const STORAGE_KEY = 'pedidos_orders';
 const DESPACHOS_KEY = 'pedidos_despachos';
@@ -311,10 +311,10 @@ export async function completeOrder(id: number, end_time: string): Promise<Order
   const order = orders[idx];
   if (order.status !== 'pending') throw new Error('El pedido ya está completado');
 
-  const hours = calculateHours(order.start_time, end_time);
+  const hours = calculateHoursSince(order.date, order.start_time);
   const kgph = calculateKgPerHour(order.kg, hours);
   order.end_time = end_time;
-  order.time_spent = calculateTimeSpent(order.start_time, end_time);
+  order.time_spent = calculateTimeSpentSince(order.date, order.start_time);
   order.kg_per_hour = kgph;
   order.efficiency = calculateEfficiency(kgph);
   order.status = 'completed';

@@ -4,7 +4,7 @@ import type { Order, RegisterOrderData, OrderFormData, DashboardData, Statistics
 function getCurrentUser(): string {
   return localStorage.getItem('current_user') || '';
 }
-import { calculateTimeSpent, calculateHours, calculateKgPerHour, calculateEfficiency, calculateCargueEfficiency, calculateDescargueEfficiency, calculateCargueTime, parseTimeSpentToHours } from './utils';
+import { calculateTimeSpent, calculateHours, calculateKgPerHour, calculateEfficiency, calculateCargueEfficiency, calculateDescargueEfficiency, calculateCargueTime, parseTimeSpentToHours, calculateHoursSince, calculateTimeSpentSince } from './utils';
 
 function mapOrder(row: any): Order {
   return {
@@ -147,12 +147,12 @@ export async function completeOrder(id: number, end_time: string): Promise<Order
   if (fetchError) throw new Error('Pedido no encontrado');
 
   const order = mapOrder(current);
-  const hours = calculateHours(order.start_time, end_time);
+  const hours = calculateHoursSince(order.date, order.start_time);
   const kgph = calculateKgPerHour(order.kg, hours);
 
   const { data: row, error } = await getSupabase().from('orders').update({
     end_time,
-    time_spent: calculateTimeSpent(order.start_time, end_time),
+    time_spent: calculateTimeSpentSince(order.date, order.start_time),
     kg_per_hour: kgph,
     efficiency: calculateEfficiency(kgph),
     status: 'completed',
